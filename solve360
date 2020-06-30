@@ -1,0 +1,54 @@
+var email = await dk.params.get("email")
+var password = await dk.params.get("password")
+var imo = await dk.params.get("imo")
+
+await dk.set({ speed: "human" })
+await dk.goto("https://secure.solve360.com/")
+await dk.fill({ email, password })
+await dk.submit()
+
+await dk.input({ css: 'div#ext-gen252 > input' }, imo)
+await dk.submit()
+await dk.sleep(1500)
+
+var vessel = await dk.collect([ { name: "vessel", value: { content: 0 }, selection: { css: "div.x-grid3-scroller table.x-grid3-row-table tr:first-child > td:nth-child(2) > div" } }])
+if (Boolean(vessel.length)) {
+    await dk.click({ css: "div.x-grid3-scroller table.x-grid3-row-table tr:first-child > td:nth-child(2)" })
+    await dk.sleep(5000)
+    var data = await dk.collect([{
+        name: 'type',
+        selection: {
+            css: 'div[class=" x-panel x-item-body x-panel-noborder"] div[class=" x-item-view-item"] > label'
+        }
+    }, {
+        name: 'value',
+        selection: {
+            css: 'div[class=" x-panel x-item-body x-panel-noborder"] div[class=" x-item-view-item"] > span'
+        }
+    }])
+    await console.log(data)
+    if (data.filter( el => el.type =="IG System").length > 0) {
+        var ig_system = data.filter( el => el.type =="IG System")[0].value
+    } else { var ig_system = "not available" }
+    if (data.filter( el => el.type =="Incinerators").length > 0) {
+        var incinerators = data.filter( el => el.type =="Incinerators")[0].value
+    } else { var incinerators = "not available" }
+    if (data.filter( el => el.type =="Burner Type").length > 0) {
+        var burner_type = data.filter( el => el.type =="Burner Type")[0].value
+    } else { var burner_type = "not available" }
+    if (data.filter( el => el.type =="KYMA").length > 0) {
+        var kyma = data.filter( el => el.type =="KYMA")[0].value
+    } else { var kyma = "not available" }
+} else { var ig_system = "not available"; var incinerators = "not available"; var burner_type = "not available"; var kyma = "not available" }
+
+await dk.click({ css: 'div#ux-taskbar-start'})
+await dk.click({ css: 'li#x-menu-el-ux-logout'})
+
+var result = [{
+    ig_system: ig_system,
+    incinerators: incinerators,
+    burner_type: burner_type,
+    kyma: kyma
+}]
+
+return result
