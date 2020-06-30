@@ -1,0 +1,123 @@
+var email = await dk.params.get("email")
+var password = await dk.params.get("password")
+var imo = await dk.params.get("imo")
+var boilerManufacturer, docCompany, technicalManager;
+await dk.set({ speed: "cyborg" })
+await dk.goto("https://maritime.ihs.com/Account2/Index")
+await dk.fill({ email, password })
+await dk.submit()
+await dk.click({ css: 'section:first-child section.tile_1 a.tile_link' })
+await dk.input({ css: 'input#ctl00_LRNO' }, imo)
+await dk.submit()
+await dk.sleep(3000)
+await dk.click({ css: 'input[name="checker_p0"]' })
+await dk.click({ css: 'input[name="checker_pC"]' })
+var getSiblings = async function(selection) {
+    var node = await dk.info(selection)
+    if (node[0]) {
+        var parent = await dk.info({ id: node[0].parent })
+        var siblings = []
+        for (var child of parent[0].children) {
+            siblings.push((await dk.info({ id: child }))[0])
+        }
+        return siblings
+    }
+    else {
+        throw new Error("No elements matched")
+    }
+}
+var siblings = await getSiblings({
+    content: "doc company",
+    css: "td"
+})
+await dk.hover({ id: siblings[1].children[0] })
+var docCompanyName = await dk.collect([{ name: "name", selection: { id: siblings[1].children[0] } }])
+await dk.sleep(1000)
+var result1 = await dk.collect([{
+    name: "text",
+    value: {
+        content: -1
+    },
+    selection: {
+        css: "#WzBoDyI"
+    }
+}])
+var siblings2 = await getSiblings({
+    content: "technical manager",
+    css: "td"
+})
+await dk.hover({ id: siblings2[1].children[0] })
+await dk.sleep(1000)
+var result2 = await dk.collect([{
+    name: "text",
+    value: {
+        content: -1
+    },
+    selection: {
+        css: "#WzBoDyI"
+    }
+}])
+function getMatchingResults(str, regex) {
+    var matches = str.match(regex)
+    if (matches && matches[1]) {
+        return matches[1]
+    }
+    else {
+        return null
+    }
+}
+function extractContactInfos(str) {
+    return {
+        addr: getMatchingResults(str, /^(.*?)(Tel|Email)/),
+        tel: getMatchingResults(str, /\bTel\:(\+[0-9\s]+)\b/),
+        email: getMatchingResults(str, /\b([\w.!#$%&'*+\/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)*)\b/)
+    }
+}
+var docCompany = extractContactInfos(result1[0].text)
+var technicalManager = extractContactInfos(result2[0].text)
+console.log({ docCompany, technicalManager })
+
+var siblings5 = await getSiblings({
+    content: "shiptype",
+    css: "td.label"
+})
+var shiptypeResults = await dk.collect([{
+    name: "shiptype",
+    selection: {
+        id: siblings5[3].id
+    }
+}])
+var shiptype = shiptypeResults[0].shiptype
+
+var boilerManu = await dk.info({
+    content: "Boiler Manufacturer",
+    css: "td > div"
+})
+var siblings3 = await getSiblings({
+    id: boilerManu[0].parent
+})
+var boilerResults = await dk.collect([{
+    name: "boilerManufacturer",
+    value: {
+        content: -1
+    },
+    selection: {
+        id: siblings3[1].id
+    }
+}])
+var boilerManufacturer = boilerResults[0].boilerManufacturer
+
+var siblings4 = await getSiblings({
+    content: "built",
+    css: "td.label"
+})
+var buildingYearResults = await dk.collect([{
+    name: "buildingYear",
+    selection: {
+        id: siblings4[3].id
+    }
+}])
+var buildingYear = buildingYearResults[0].buildingYear
+
+await dk.click({ css: 'a[href*="LogOff"]' })
+return { docCompanyName, docCompany, technicalManager, shiptype, boilerManufacturer, buildingYear }
